@@ -1,0 +1,21 @@
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+plugins {
+    id("com.facebook.react.settings")
+   // id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        mavenLocal()
+        // Local AsyncStorage repo first to avoid JitPack timeouts
+        maven { url "$rootDir/../node_modules/@react-native-async-storage/async-storage/android/local_repo" }
+        maven { url "$rootDir/local_repo" }
+        google()
+        mavenCentral()
+        // maven { url "https://www.jitpack.io" } // not needed because local repo has the artifact
+    }
+}
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'LoraGuard'
+include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')

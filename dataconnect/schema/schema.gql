@@ -1,0 +1,41 @@
+type User @table {
+  displayName: String!
+  email: String!
+  createdAt: Timestamp!
+  photoUrl: String
+}
+
+type FirebaseProject @table {
+  user: User!
+  projectName: String!
+  projectId: String!
+  createdAt: Timestamp!
+  apiKey: String
+  serviceAccountJson: String
+}
+
+type DashboardLayout @table {
+  user: User!
+  firebaseProject: FirebaseProject!
+  layoutName: String!
+  isPublic: Boolean!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  description: String
+  layoutConfig: String
+}
+
+type Metric @table {
+  firebaseProject: FirebaseProject!
+  metricName: String!
+  serviceType: String!
+  dataType: String!
+  unit: String!
+  description: String
+}
+
+type MetricDataPoint @table {
+  metric: Metric!
+  timestamp: Timestamp!
+  value: Float!
+}
