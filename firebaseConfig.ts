@@ -7,14 +7,13 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDT_cbIEMkZvrvLr5beKGVAQZLLJSjliZo",
-  authDomain: "loraguard-e2d70.firebaseapp.com",
-  databaseURL: "https://loraguard-e2d70-default-rtdb.firebaseio.com",
-  projectId: "loraguard-e2d70",
-  storageBucket: "loraguard-e2d70.firebasestorage.app",
-  messagingSenderId: "990271413011",
-  appId: "1:990271413011:web:7c9a9f1dadd795491318e6",
-  measurementId: "G-WWV17TFNM3"
+  apiKey: "AIzaSyC9ChJKmgpLdG64B2bxGh2lXT6wh00obUA",
+  authDomain: "esp32-deneme-72093.firebaseapp.com",
+  databaseURL: "https://esp32-deneme-72093-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "esp32-deneme-72093",
+  storageBucket: "esp32-deneme-72093.firebasestorage.app",
+  messagingSenderId: "1062955559068",
+  appId: "1:1062955559068:android:6f3f72d7c593e69614e559"
 };
 
 // Initialize Firebase

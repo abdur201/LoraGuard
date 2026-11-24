@@ -1,4 +1,3 @@
-// App.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   SafeAreaView,
@@ -8,10 +7,10 @@ import {
   StyleSheet,
   AppState,
   Platform,
+  Dimensions,
 } from 'react-native';
 import PushNotification, {PushNotificationObject} from 'react-native-push-notification';
-import {VictoryChart, VictoryLine, VictoryAxis, VictoryTheme} from 'victory-native';
-import Svg from 'react-native-svg';
+import { LineChart } from "react-native-chart-kit";
 
 type DataPoint = {
   nem: number;
@@ -23,7 +22,7 @@ type DataPoint = {
 type AnomalyMsg = {type: 'anomaly'; message: string; at: string; metric?: string};
 
 const WS_URL = 'ws://YOUR_RASPI_IP:PORT/stream'; // Raspberry Pi websocket endpoint
-const HISTORY_LIMIT = 100;
+const HISTORY_LIMIT = 50;
 
 export default function App() {
   const [data, setData] = useState<DataPoint[]>([]);
@@ -32,7 +31,7 @@ export default function App() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
-
+ 
   const hasValidWsUrl = useMemo(() => {
     const trimmed = WS_URL.trim();
     const usesPlaceholder = trimmed.includes('YOUR_RASPI_IP') || trimmed.includes('PORT');
@@ -44,8 +43,6 @@ export default function App() {
   useEffect(() => {
     PushNotification.configure({
       onNotification: (n: PushNotificationObject) => console.log('Notif:', n),
-      // Android does not need runtime permission for local notifications.
-      // Keeping this true on Android triggers Firebase without an initialized app.
       requestPermissions: Platform.OS === 'ios',
     });
     PushNotification.createChannel(
@@ -55,9 +52,7 @@ export default function App() {
   }, []);
 
   const connect = useCallback(() => {
-    if (wsRef.current || !isMounted.current) {
-      return;
-    }
+    if (wsRef.current || !isMounted.current) return;
 
     if (!hasValidWsUrl) {
       setConnectionStatus('WS_URL tanimlanmadi - ornek veri gosteriliyor');
@@ -87,7 +82,7 @@ export default function App() {
       wsRef.current = null;
       setConnectionStatus('Baglanti koptu, yeniden denenecek...');
       if (isMounted.current) {
-        reconnectTimer.current = setTimeout(() => connect(), 2000); // retry
+        reconnectTimer.current = setTimeout(() => connect(), 2000);
       }
     };
     ws.onmessage = ev => {
@@ -104,7 +99,6 @@ export default function App() {
     };
   }, []);
 
-  // WebSocket connect
   useEffect(() => {
     connect();
     const sub = AppState.addEventListener('change', state => {
@@ -128,16 +122,15 @@ export default function App() {
 
   const pushData = (d: DataPoint) => {
     setData(prev => {
-      const next = [...prev, d].slice(-HISTORY_LIMIT);
-      return next;
+      // Yeni gelen veriyi listenin sonuna ekler.
+      // .slice(-HISTORY_LIMIT) sayesinde liste ne kadar uzarsa uzasın, 
+      // her zaman kuyruktaki son 100 veriyi (HISTORY_LIMIT) kesip alır.
+      return [...prev, d].slice(-HISTORY_LIMIT);
     });
   };
 
-  // When WS_URL is not configured, keep the UI alive with sample values
   useEffect(() => {
-    if (hasValidWsUrl) {
-      return;
-    }
+    if (hasValidWsUrl) return;
     const timer = setInterval(() => {
       const now = new Date();
       pushData({
@@ -162,7 +155,6 @@ export default function App() {
     });
   };
 
-  // Prepare chart data
   const chartData = useMemo(
     () => ({
       ppm: data.map((d, i) => ({x: i, y: d.ppm})),
@@ -183,7 +175,7 @@ export default function App() {
         <Text style={styles.title}>Son Olcum</Text>
         {last ? (
           <Text style={styles.value}>
-            Nem: {last.nem}% | PPM: {last.ppm.toFixed(2)} | Sicaklik: {last.sicaklik}C
+            Nem: {last.nem.toFixed(1)}% | PPM: {last.ppm.toFixed(0)} | Sicaklik: {last.sicaklik.toFixed(1)}C
           </Text>
         ) : (
           <Text style={styles.muted}>Veri bekleniyor...</Text>
@@ -192,20 +184,53 @@ export default function App() {
 
       <View style={styles.chartCard}>
         <Text style={styles.title}>Zamana Gore Degerler (son {HISTORY_LIMIT})</Text>
-        <Svg height={240} width="100%">
-          <VictoryChart
-            standalone={false}
-            width={350}
-            height={240}
-            theme={VictoryTheme.material}
-            padding={{top: 20, left: 50, right: 30, bottom: 40}}>
-            <VictoryAxis />
-            <VictoryAxis dependentAxis tickFormat={(t: number) => `${t}`} />
-            <VictoryLine data={chartData.ppm} style={{data: {stroke: '#ff6b6b'}}} />
-            <VictoryLine data={chartData.nem} style={{data: {stroke: '#1e90ff'}}} />
-            <VictoryLine data={chartData.sicaklik} style={{data: {stroke: '#2ecc71'}}} />
-          </VictoryChart>
-        </Svg>
+        
+       <LineChart
+          data={{
+            labels: chartData.ppm.length > 0 ? chartData.ppm.map((_, i) => (i % 20 === 0 ? String(i) : "")) : ["0"],
+            datasets: [
+              {
+                data: chartData.ppm.length > 0 ? chartData.ppm.map((d: any) => d.y) : [0],
+                // Opaklığı zorla 1 yapıyoruz (solukluğu kaldırıyoruz)
+                color: () => `rgba(255, 107, 107, 1)`, 
+                strokeWidth: 3 // Çizgi kalınlığı (Varsayılan 1'di, 3 yaparak belirginleştirdik)
+              },
+              {
+                data: chartData.nem.length > 0 ? chartData.nem.map((d: any) => d.y) : [0],
+                color: () => `rgba(30, 144, 255, 1)`,
+                strokeWidth: 3
+              },
+              {
+                data: chartData.sicaklik.length > 0 ? chartData.sicaklik.map((d: any) => d.y) : [0],
+                color: () => `rgba(46, 204, 113, 1)`,
+                strokeWidth: 3
+              }
+            ]
+          }}
+          width={Dimensions.get("window").width - 48}
+          height={220}
+          withDots={false}
+          withShadow={false}
+          chartConfig={{
+            backgroundColor: "#111827",
+            backgroundGradientFrom: "#111827",
+            backgroundGradientTo: "#111827",
+            decimalPlaces: 0, 
+            // Izgara çizgilerini biraz daha belirgin yaptık (0.1 -> 0.15)
+            color: () => `rgba(255, 255, 255, 0.15)`, 
+            // Yazıları soluk griden, parlak beyaza çektik
+            labelColor: () => `rgba(226, 232, 240, 1)`, 
+            propsForBackgroundLines: {
+              strokeDasharray: "", 
+            }
+          }}
+          bezier
+          style={{
+            marginVertical: 10,
+            borderRadius: 8,
+          }}
+        />
+        
         <Text style={styles.legend}>Kirmizi: PPM | Mavi: Nem | Yesil: Sicaklik</Text>
       </View>
 
@@ -237,9 +262,9 @@ const styles = StyleSheet.create({
   card: {backgroundColor: '#111827', borderRadius: 10, padding: 12, marginBottom: 10},
   chartCard: {backgroundColor: '#111827', borderRadius: 10, padding: 12, marginBottom: 10},
   title: {color: '#cbd5e1', fontWeight: '700', marginBottom: 6},
-  value: {color: '#e2e8f0'},
+  value: {color: '#66a6f9'},
   muted: {color: '#94a3b8'},
-  legend: {color: '#94a3b8', marginTop: 6, fontSize: 12},
+  legend: {color: '#94a3b8', marginTop: 6, fontSize: 12, textAlign: 'center'},
   notifItem: {paddingVertical: 6, borderBottomColor: '#1f2937', borderBottomWidth: 1},
   notifText: {color: '#e2e8f0', fontWeight: '600'},
   notifSub: {color: '#94a3b8', fontSize: 12},

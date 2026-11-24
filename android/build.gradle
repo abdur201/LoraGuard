@@ -1,8 +1,28 @@
+
+
+import java.nio.file.Files
+import java.nio.file.Paths
+
+def pushNotifPath = Paths.get(rootDir.path, "../node_modules/react-native-push-notification/android/build.gradle")
+if (Files.exists(pushNotifPath)) {
+    def content = new String(Files.readAllBytes(pushNotifPath))
+    if (content.contains("jcenter()")) {
+        println "Sistem: react-native-push-notification içindeki jcenter() temizleniyor..."
+        content = content.replace("jcenter()", "mavenCentral()")
+        Files.write(pushNotifPath, content.getBytes())
+    }
+}
+
+
+
+
+
+
 buildscript {
     ext {
         buildToolsVersion = "36.0.0"
         minSdkVersion = 24
-        compileSdkVersion = 36
+        compileSdkVersion = 34
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.1.20"
@@ -34,5 +54,23 @@ allprojects {
         google()
         mavenCentral()
         // maven { url "https://www.jitpack.io" } // not needed because local repo has the artifact
+    }
+}
+
+// Eski eklediğin subprojects/afterEvaluate bloğunu tamamen silip bunu yapıştır:
+subprojects {
+    project.beforeEvaluate { proj ->
+        proj.repositories {
+            // jcenter'ı arayan tüm depoları bul ve listeden at
+            all { repo ->
+                if (repo instanceof MavenArtifactRepository && repo.url.toString().contains("jcenter")) {
+                    project.logger.warn("Sistem: ${proj.name} içindeki jcenter() engellendi ve temizlendi.")
+                    remove repo
+                }
+            }
+            // Güvenli depoların en üstte olduğundan emin ol
+            google()
+            mavenCentral()
+        }
     }
 }

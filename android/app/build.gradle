@@ -1,7 +1,11 @@
+buildDir = new File(rootDir.parentFile, "build-app")
+
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
-
+react {
+    hermesCommand = "$rootDir/hermesc.cmd"
+}
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -130,5 +134,37 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+afterEvaluate {
+    tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach { bundleRelease ->
+        bundleRelease.dependsOn(
+                "generateReactNativeEntryPoint",
+                "generateAutolinkingPackageList",
+                "generateAutolinkingNewArchitectureFiles",
+                "generateReleaseBuildConfig",
+                "generateReleaseResValues",
+                "checkReleaseDuplicateClasses",
+                "checkReleaseAarMetadata",
+                "createReleaseCompatibleScreenManifests",
+                "extractReleaseNativeSymbolTables",
+                "extractProguardFiles",
+                "desugarReleaseFileDependencies",
+                "mergeReleaseJniLibFolders",
+                "mergeReleaseNativeLibs",
+                "mergeExtDexRelease",
+                "mergeReleaseShaders",
+                "stripReleaseDebugSymbols",
+                "buildKotlinToolingMetadata"
+        )
+
+        bundleRelease.dependsOn(tasks.matching { it.name.startsWith("configureCMakeRelWithDebInfo") && it.name.contains("Release") })
+        bundleRelease.dependsOn(tasks.matching { it.name.startsWith("buildCMakeRelWithDebInfo") && it.name.contains("Release") })
+    }
+}
+project.afterEvaluate {
+    tasks.named("createBundleReleaseJsAndAssets") {
+        dependsOn("validateSigningRelease")
     }
 }
